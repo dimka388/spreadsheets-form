@@ -37,10 +37,11 @@ The GitHub Actions workflow in `.github/workflows/deploy.yml` will automatically
 
 1. **Sign up at [Railway](https://railway.app)**
 2. **Connect your GitHub repository**
-3. **Deploy with one click**
-4. **Set environment variables**:
-   - `GOOGLE_SCRIPT_URL`: Your Google Apps Script URL
+3. **Deploy automatically** (Railway detects Node.js projects)
+4. **Set environment variables** in Railway dashboard:
    - `NODE_ENV`: `production`
+   - Optionally: `GOOGLE_SCRIPT_URL` (can be set via UI instead)
+5. **Copy the Railway app URL** for your configuration
 
 ### Option 2: Render
 

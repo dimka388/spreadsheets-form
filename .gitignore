@@ -11,10 +11,6 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# Build outputs
-dist/
-build/
-
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -34,15 +30,6 @@ Thumbs.db
 # Logs
 logs
 *.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
 
 # Temporary folders
 tmp/

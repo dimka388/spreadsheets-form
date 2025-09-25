@@ -8,21 +8,18 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Google Apps Script URL
-const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbzzK1haMLCr34L-Iin14Eo6q9etJ2EY6inPPrMlSm1qGDOgAM7uTC4NdaaS67nIZ8ju/exec';
-
 // Middleware
 app.use(helmet());
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
         ? ['https://dimka388.github.io', 'https://your-domain.com'] // Add your GitHub Pages URL
-        : ['http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:5500'], // Local development
+        : ['http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:8000'], // Local development
     credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static files (for local development)
+// Serve static files
 app.use(express.static(path.join(__dirname)));
 
 // Health check endpoint
@@ -38,6 +35,16 @@ app.get('/health', (req, res) => {
 app.post('/api/submit', async (req, res) => {
     try {
         console.log('Received form submission:', req.body);
+        
+        // Get Google Apps Script URL from request or environment
+        const scriptUrl = req.body.scriptUrl || process.env.GOOGLE_SCRIPT_URL;
+        
+        if (!scriptUrl) {
+            return res.status(400).json({
+                success: false,
+                error: 'Google Apps Script URL is required'
+            });
+        }
         
         // Validate required fields
         const { name, email, message } = req.body;
@@ -59,14 +66,21 @@ app.post('/api/submit', async (req, res) => {
         
         // Prepare data for Google Apps Script
         const formData = {
-            ...req.body,
+            name: req.body.name,
+            email: req.body.email,
+            phone: req.body.phone || '',
+            company: req.body.company || '',
+            message: req.body.message,
             timestamp: req.body.timestamp || new Date().toISOString(),
             userAgent: req.get('User-Agent'),
             ip: req.ip || req.connection.remoteAddress
         };
         
+        console.log('Sending to Google Apps Script:', scriptUrl);
+        console.log('Data:', formData);
+        
         // Send request to Google Apps Script
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
+        const response = await fetch(scriptUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -75,10 +89,22 @@ app.post('/api/submit', async (req, res) => {
             timeout: 30000 // 30 second timeout
         });
         
+        console.log('Google Apps Script response status:', response.status);
+        
         let result;
         try {
-            result = await response.json();
+            const responseText = await response.text();
+            console.log('Google Apps Script raw response:', responseText);
+            
+            if (responseText.trim()) {
+                result = JSON.parse(responseText);
+            } else {
+                // Empty response, assume success if status is OK
+                result = { success: true, message: 'Form submitted successfully' };
+            }
         } catch (parseError) {
+            console.warn('Failed to parse JSON response:', parseError.message);
+            
             // If response is not JSON, assume success if status is OK
             if (response.ok) {
                 result = { success: true, message: 'Form submitted successfully' };
@@ -87,9 +113,8 @@ app.post('/api/submit', async (req, res) => {
             }
         }
         
-        console.log('Google Apps Script response:', result);
-        
         if (response.ok) {
+            console.log('Success! Parsed result:', result);
             res.json({
                 success: true,
                 message: 'Form submitted successfully',
@@ -110,64 +135,58 @@ app.post('/api/submit', async (req, res) => {
     }
 });
 
-// Alternative endpoint using URL-encoded form data (for better compatibility)
-app.post('/api/submit-form', async (req, res) => {
+// Test endpoint for Google Apps Script connectivity
+app.post('/api/test-connection', async (req, res) => {
     try {
-        console.log('Received form submission (URL-encoded):', req.body);
+        const { scriptUrl } = req.body;
         
-        // Convert to the same format as JSON endpoint
-        const formData = {
-            name: req.body.name,
-            email: req.body.email,
-            phone: req.body.phone || '',
-            company: req.body.company || '',
-            message: req.body.message,
-            timestamp: new Date().toISOString(),
-            userAgent: req.get('User-Agent'),
-            ip: req.ip || req.connection.remoteAddress
-        };
-        
-        // Create form data for Google Apps Script
-        const params = new URLSearchParams();
-        Object.keys(formData).forEach(key => {
-            params.append(key, formData[key]);
-        });
-        
-        const response = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: params.toString(),
-            timeout: 30000
-        });
-        
-        if (response.ok) {
-            res.json({
-                success: true,
-                message: 'Form submitted successfully'
+        if (!scriptUrl) {
+            return res.status(400).json({
+                success: false,
+                error: 'Script URL is required'
             });
-        } else {
-            throw new Error(`Google Apps Script returned ${response.status}: ${response.statusText}`);
         }
         
-    } catch (error) {
-        console.error('Error submitting form data:', error);
+        console.log('Testing connection to:', scriptUrl);
         
+        // Test with GET request first
+        const response = await fetch(scriptUrl, {
+            method: 'GET',
+            timeout: 15000
+        });
+        
+        const responseText = await response.text();
+        console.log('Test response:', responseText);
+        
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch {
+            result = { message: 'Response received but not JSON' };
+        }
+        
+        res.json({
+            success: response.ok,
+            status: response.status,
+            statusText: response.statusText,
+            data: result
+        });
+        
+    } catch (error) {
+        console.error('Connection test failed:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to submit form. Please try again later.',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: error.message
         });
     }
 });
 
-// Serve the main page for local development
+// Serve the main page
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Serve the form page for local development
+// Serve the form page
 app.get('/form', (req, res) => {
     res.sendFile(path.join(__dirname, 'form.html'));
 });
@@ -193,7 +212,6 @@ app.use((req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Google Apps Script URL: ${GOOGLE_SCRIPT_URL}`);
     
     if (process.env.NODE_ENV !== 'production') {
         console.log(`Local development URLs:`);

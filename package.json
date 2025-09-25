@@ -7,8 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "echo 'No build step required'",
-    "test": "echo 'No tests configured yet'",
-    "deploy": "echo 'Deploy to your preferred platform (Railway, Render, Heroku, etc.)'"
+    "test": "echo 'No tests configured yet'"
   },
   "keywords": [
     "express",

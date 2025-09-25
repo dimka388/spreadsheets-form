@@ -14,6 +14,7 @@
                 <ul class="nav-links">
                     <li><a href="index.html">Home</a></li>
                     <li><a href="form.html" class="active">Contact Form</a></li>
+                    <li><a href="#" id="configBtn" class="config-btn">⚙️ Config</a></li>
                 </ul>
             </div>
         </nav>
@@ -64,8 +65,53 @@
                 <div id="errorMessage" class="message error-message" style="display: none;">
                     Sorry, there was an error sending your message. Please try again.
                 </div>
+
+                <div id="configNotice" class="message warning-message" style="display: none;">
+                    Please configure your Google Apps Script URL first by clicking the Config button above.
+                </div>
             </div>
         </section>
+
+        <!-- Configuration Modal -->
+        <div id="configModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Google Apps Script Configuration</h2>
+                    <span class="close" id="closeModal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>To use this form, you need to set up a Google Apps Script web app and provide its URL.</p>
+                    
+                    <div class="form-group">
+                        <label for="scriptUrl">Google Apps Script URL *</label>
+                        <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/your-script-id/exec" required>
+                        <small>This URL should end with '/exec'</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="serverUrl">Server URL (Optional - for CORS-free submissions)</label>
+                        <input type="url" id="serverUrl" placeholder="https://your-app.railway.app">
+                        <small>If you deployed the server, enter its URL here for better reliability</small>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" id="saveConfig" class="save-button">Save Configuration</button>
+                        <button type="button" id="testConfig" class="test-button">Test Connection</button>
+                    </div>
+                    
+                    <div class="config-help">
+                        <h3>How to get your Google Apps Script URL:</h3>
+                        <ol>
+                            <li>Create a Google Sheet</li>
+                            <li>Go to Extensions → Apps Script</li>
+                            <li>Copy the code from <code>google-apps-script.js</code></li>
+                            <li>Deploy as Web App (Execute as: Me, Access: Anyone)</li>
+                            <li>Copy the Web App URL and paste it above</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <footer>
